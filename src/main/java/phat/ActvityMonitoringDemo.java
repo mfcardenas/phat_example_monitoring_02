@@ -18,6 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package phat;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.Date;
+import java.util.Properties;
 import java.util.logging.Logger;
 
 import com.jme3.app.Application;
@@ -28,23 +36,34 @@ import com.jme3.bullet.BulletAppState;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 
+import com.jme3.system.AppSettings;
 import phat.app.PHATApplication;
 import phat.app.PHATInitAppListener;
 import phat.body.BodiesAppState;
-import phat.body.commands.PlayBodyAnimationCommand;
-import phat.body.commands.SetBodyInCoordenatesCommand;
-import phat.body.commands.SetSpeedDisplacemenetCommand;
+import phat.body.commands.*;
 import phat.devices.DevicesAppState;
 import phat.devices.commands.CreateAccelerometerSensorCommand;
+import phat.devices.commands.CreateSmartphoneCommand;
 import phat.devices.commands.SetDeviceOnPartOfBodyCommand;
 import phat.environment.SpatialEnvironmentAPI;
+import phat.mobile.servicemanager.server.ServiceManagerServer;
+import phat.mobile.servicemanager.services.Service;
+import phat.sensors.accelerometer.AccelerationData;
 import phat.sensors.accelerometer.AccelerometerControl;
 import phat.sensors.accelerometer.XYAccelerationsChart;
+import phat.sensors.accelerometer.XYShiftingAccelerationsChart;
+import phat.server.PHATServerManager;
 import phat.server.ServerAppState;
 import phat.server.commands.ActivateAccelerometerServerCommand;
 import phat.structures.houses.HouseFactory;
+import phat.structures.houses.TestHouse;
 import phat.structures.houses.commands.CreateHouseCommand;
+import phat.util.Debug;
+import phat.util.SpatialFactory;
 import phat.world.WorldAppState;
+import sim.android.hardware.service.SimSensorEvent;
+
+import javax.swing.*;
 
 /**
  * Class example Test rum simulatios.
@@ -77,65 +96,100 @@ import phat.world.WorldAppState;
  */
 public class ActvityMonitoringDemo implements PHATInitAppListener {
 
-    private static final Logger logger = Logger.getLogger(ActvityMonitoringDemo.class.getName());
-    BodiesAppState bodiesAppState;
-    ServerAppState serverAppState;
-    DevicesAppState devicesAppState;
-    WorldAppState worldAppState;
+    private static final Logger logger = Logger.getLogger(TestHouse.class.getName());
+    private BodiesAppState bodiesAppState;
+    private ServerAppState serverAppState;
+    private DevicesAppState devicesAppState;
+    private WorldAppState worldAppState;
 
+    private static Properties config;
+
+    public static void main(String[] args) {
+        ActvityMonitoringDemo test = new ActvityMonitoringDemo();
+        PHATApplication phat = new PHATApplication(test);
+        phat.setDisplayFps(true);
+        phat.setDisplayStatView(false);
+        AppSettings settings = new AppSettings(true);
+        settings.setTitle("PHAT");
+        settings.setWidth(640);
+        settings.setHeight(480);
+        phat.setSettings(settings);
+        phat.start();
+    }
 
     @Override
     public void init(SimpleApplication app) {
-        logger.info("init");
+        SpatialFactory.init(app.getAssetManager(), app.getRootNode());
+
         AppStateManager stateManager = app.getStateManager();
 
         app.getFlyByCamera().setMoveSpeed(10f);
 
+        app.getCamera().setLocation(new Vector3f(0.2599395f, 2.7232018f, 3.373138f));
+        app.getCamera().setRotation(new Quaternion(-0.0035931943f, 0.9672268f, -0.25351822f, -0.013704466f));
+
         BulletAppState bulletAppState = new BulletAppState();
+        bulletAppState.setThreadingType(BulletAppState.ThreadingType.PARALLEL);
         stateManager.attach(bulletAppState);
-        bulletAppState.setDebugEnabled(false);
+        bulletAppState.getPhysicsSpace().setAccuracy(1 / 60f);
 
-        SpatialEnvironmentAPI seAPI = SpatialEnvironmentAPI.createSpatialEnvironmentAPI(app);
+        worldAppState = new WorldAppState();
+        worldAppState.setLandType(WorldAppState.LandType.Grass);
+        app.getStateManager().attach(worldAppState);
+        worldAppState.setCalendar(2013, 1, 1, 12, 0, 0);
 
-        seAPI.getWorldAppState().setCalendar(2016, 6 ,1, 12, 30, 0);
-        seAPI.getHouseAppState().runCommand(new CreateHouseCommand("House1", HouseFactory.HouseType.House3room2bath));
-
+        Debug.enableDebugGrid(10, app.getAssetManager(), app.getRootNode());
         bodiesAppState = new BodiesAppState();
         stateManager.attach(bodiesAppState);
 
-        //Se crean los personajes
-        bodiesAppState.createBody(BodiesAppState.BodyType.Young, "Patient");
-
-        //Se posicionan en la casa
-        bodiesAppState.setInSpace("Patient", "House1", "Chair3");
-
+        bodiesAppState.createBody(BodiesAppState.BodyType.Elder, "Patient");
         bodiesAppState.runCommand(new SetBodyInCoordenatesCommand("Patient", Vector3f.ZERO));
+
         bodiesAppState.runCommand(new SetSpeedDisplacemenetCommand("Patient", 0.5f));
+        bodiesAppState.runCommand(new SetStoopedBodyCommand("Patient", true));
+
+        SetCameraToBodyCommand camCommand = new SetCameraToBodyCommand("Patient");
+        camCommand.setDistance(3);
+        camCommand.setFront(true);
+        bodiesAppState.runCommand(camCommand);
 
         devicesAppState = new DevicesAppState();
         stateManager.attach(devicesAppState);
 
-        // Positions of sensor Acelerometers
-        devicesAppState.runCommand(new CreateAccelerometerSensorCommand("sensor1"));
-        devicesAppState.runCommand(new SetDeviceOnPartOfBodyCommand("Patient", "sensor1",
-                SetDeviceOnPartOfBodyCommand.PartOfBody.LeftHand));
 
-        devicesAppState.runCommand(new CreateAccelerometerSensorCommand("sensor2"));
-        devicesAppState.runCommand(new SetDeviceOnPartOfBodyCommand("Patient", "sensor2",
+        devicesAppState.runCommand(new CreateSmartphoneCommand("Smartphone1"));
+        devicesAppState.runCommand(new SetDeviceOnPartOfBodyCommand("Patient", "Smartphone1",
+                SetDeviceOnPartOfBodyCommand.PartOfBody.Chest));
+
+        devicesAppState.runCommand(new CreateAccelerometerSensorCommand("Sensor2"));
+        devicesAppState.runCommand(new SetDeviceOnPartOfBodyCommand("Patient", "Sensor2",
                 SetDeviceOnPartOfBodyCommand.PartOfBody.RightHand));
 
-        devicesAppState.runCommand(new CreateAccelerometerSensorCommand("sensor3"));
-        devicesAppState.runCommand(new CreateAccelerometerSensorCommand("sensor4"));
+        devicesAppState.runCommand(new CreateAccelerometerSensorCommand("Sensor3"));
+        devicesAppState.runCommand(new SetDeviceOnPartOfBodyCommand("Patient", "Sensor3",
+                SetDeviceOnPartOfBodyCommand.PartOfBody.LeftHand));
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        new Thread() { public void run() {
+            launchRemoteXYChart(PHATServerManager.getAddress(),"Remote Chest"
+                    ,"Smartphone1");
+            launchRemoteXYChart(PHATServerManager.getAddress(),"Remote Right Hand"
+                    ,"Sensor2");
+            launchRemoteXYChart(PHATServerManager.getAddress(),"Remote Left Hand"
+                    ,"Sensor3");
+        } }.start();
 
         serverAppState = new ServerAppState();
         stateManager.attach(serverAppState);
 
-        // Activate Acelerometers
-        serverAppState.runCommand(new ActivateAccelerometerServerCommand("PatientBodyAccel", "sensor1"));
-        serverAppState.runCommand(new ActivateAccelerometerServerCommand("PatientBodyAccel", "sensor2"));
-
-        app.getCamera().setLocation(new Vector3f(6.5472484f, 1.5681753f, 4.951794f));
-        app.getCamera().setRotation(new Quaternion(0.030681776f, 0.9156617f, -0.0712238f, 0.39439762f));
+        serverAppState.runCommand(new ActivateAccelerometerServerCommand("PatientBodyAccel", "Smartphone1"));
+        serverAppState.runCommand(new ActivateAccelerometerServerCommand("PatientBodyAccel", "Sensor2"));
+        serverAppState.runCommand(new ActivateAccelerometerServerCommand("PatientBodyAccel", "Sensor3"));
 
         stateManager.attach(new AbstractAppState() {
             PHATApplication app;
@@ -143,39 +197,29 @@ public class ActvityMonitoringDemo implements PHATInitAppListener {
             @Override
             public void initialize(AppStateManager asm, Application aplctn) {
                 app = (PHATApplication) aplctn;
-
             }
 
             float cont = 0f;
             boolean fall = false;
-            float timeToChange = 10f;
+            float timeToChange = 7f;
             boolean init = false;
-            boolean traindata = false;
 
             @Override
             public void update(float f) {
-                if (!init && !traindata) {
-                    // Grafica del Sensor2
-                    AccelerometerControl ac2 = devicesAppState.getDevice("sensor2")
-                            .getControl(AccelerometerControl.class);
-                    ac2.setMode(AccelerometerControl.AMode.GRAVITY_MODE);
-                    XYAccelerationsChart chart2 = new XYAccelerationsChart("Data Accelerations Rigth Hand", "Local Sensor PHAT-SIM Rigth Hand", "m/s2",
-                            "x,y,z");
-                    ac2.add(chart2);
-                    chart2.showWindow();
-                    init = true;
-
-                    // Grafica del Sensor1
-                    AccelerometerControl ac1 = devicesAppState.getDevice("sensor1")
+                if (!init) {
+                    AccelerometerControl ac1 = devicesAppState.getDevice("Smartphone1")
                             .getControl(AccelerometerControl.class);
                     ac1.setMode(AccelerometerControl.AMode.GRAVITY_MODE);
-                    XYAccelerationsChart chart1 = new XYAccelerationsChart("Data Accelerations Left Hand", "Local Sensor PHAT-SIM Left Hand", "m/s2",
-                            "x,y,z");
-                    ac1.add(chart1);
-                    chart1.showWindow();
-                    init = true;
 
-                    // Grafica del Sensor...
+                    AccelerometerControl ac2 = devicesAppState.getDevice("Sensor2")
+                            .getControl(AccelerometerControl.class);
+                    ac2.setMode(AccelerometerControl.AMode.GRAVITY_MODE);
+
+                    AccelerometerControl ac3 = devicesAppState.getDevice("Sensor3")
+                            .getControl(AccelerometerControl.class);
+                    ac3.setMode(AccelerometerControl.AMode.GRAVITY_MODE);
+
+                    init = true;
 
                 }
 
@@ -183,9 +227,19 @@ public class ActvityMonitoringDemo implements PHATInitAppListener {
                 if (cont > timeToChange && cont < timeToChange + 1f && !fall) {
                     System.out.println("Change to DrinkStanding:::" + String.valueOf(cont) + "-" + String.valueOf(f));
                     bodiesAppState.runCommand(new PlayBodyAnimationCommand("Patient", "DrinkStanding"));
+                    /*
+                     * Gesture
+                     * SpinSpindle: 	abrir puerta con dificultad
+                     * Hands2Hips: 		llevar manos a la cadera, (dolor de espalda)
+                     * Hand2Belly: 		llevar la mano al vientre, (dolor de vientre)
+                     * Wave: 			pedir ayuda o llamar atención
+                     * ScratchArm: 		rascar el codo
+                     * LeverPole: 		molestias en el movimiento y pedir ayuda
+                     *
+                     */
                     fall = true;
                 } else {
-                    if (fall && cont > timeToChange + 10f) {
+                    if (fall && cont > timeToChange + 7f) {
                         System.out.println("Change to WaveAttention:::" + String.valueOf(cont) + "-" + String.valueOf(f));
                         bodiesAppState.runCommand(new PlayBodyAnimationCommand("Patient", "WaveAttention"));
                         fall = false;
@@ -195,20 +249,70 @@ public class ActvityMonitoringDemo implements PHATInitAppListener {
             }
         });
 
-
-
     }
 
     /**
-     * Main Class, executios Test.
-     * @param args 0
+     * launchRemoteXYChart.
+     * @param host host
+     * @param title title
+     * @param sensor sensor
      */
-    public static void main(String[] args) {
-        ActvityMonitoringDemo app = new ActvityMonitoringDemo();
-        PHATApplication phat = new PHATApplication(app);
-        phat.setDisplayFps(false);
-        phat.setDisplayStatView(false);
-        phat.setShowSettings(false);
-        phat.start();
+    public static void launchRemoteXYChart(final InetAddress host, final String title, final String sensor) {
+        Service taccelService = ServiceManagerServer.getInstance().getServiceManager().getService("PatientBodyAccel", sensor);
+        while (taccelService == null) {
+            // not ready
+            try {
+                Thread.currentThread().sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            taccelService = ServiceManagerServer.getInstance().getServiceManager().getService("PatientBodyAccel", sensor);
+        }
+        final Service accelService = taccelService;
+        new Thread() {
+            public void run() {
+                Socket s = null;
+                try {
+                    final XYShiftingAccelerationsChart chart = new XYShiftingAccelerationsChart(title,
+                            sensor + ": " + title + " accelerations", "m/s2", "x,y,z");
+                    chart.showWindow();
+                    for (int k = 0; k < 5 && s == null; k++)
+                        try {
+                            s = new Socket(host, accelService.getPort());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            try {
+                                Thread.currentThread().sleep(500);
+                            } catch (InterruptedException e1) {
+                                e1.printStackTrace();
+                            }
+
+                        }
+                    BufferedReader is = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                    String objRead = null;
+                    Long lastRead = new Date().getTime();
+                    do {
+                        objRead = is.readLine();
+                        final long interval = new Date().getTime() - lastRead;
+                        lastRead = new Date().getTime();
+                        if (objRead != null && !objRead.isEmpty()) {
+                            final SimSensorEvent sse = SimSensorEvent.fromString(objRead);
+                            if (sse != null) {
+                                SwingUtilities.invokeLater(new Runnable() {
+                                    public void run() {
+                                        AccelerationData ad = new AccelerationData(interval, sse.getValues()[0],
+                                                sse.getValues()[1], sse.getValues()[2]);
+                                        chart.update(null, ad);
+                                        chart.repaint();
+                                    }
+                                });
+                            }
+                        }
+                    } while (objRead != null);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
     }
 }
