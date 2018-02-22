@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Date;
 import java.util.Properties;
 import java.util.logging.Logger;
@@ -45,19 +44,15 @@ import phat.devices.DevicesAppState;
 import phat.devices.commands.CreateAccelerometerSensorCommand;
 import phat.devices.commands.CreateSmartphoneCommand;
 import phat.devices.commands.SetDeviceOnPartOfBodyCommand;
-import phat.environment.SpatialEnvironmentAPI;
 import phat.mobile.servicemanager.server.ServiceManagerServer;
 import phat.mobile.servicemanager.services.Service;
 import phat.sensors.accelerometer.AccelerationData;
 import phat.sensors.accelerometer.AccelerometerControl;
-import phat.sensors.accelerometer.XYAccelerationsChart;
 import phat.sensors.accelerometer.XYShiftingAccelerationsChart;
 import phat.server.PHATServerManager;
 import phat.server.ServerAppState;
 import phat.server.commands.ActivateAccelerometerServerCommand;
-import phat.structures.houses.HouseFactory;
 import phat.structures.houses.TestHouse;
-import phat.structures.houses.commands.CreateHouseCommand;
 import phat.util.Debug;
 import phat.util.SpatialFactory;
 import phat.world.WorldAppState;
@@ -66,35 +61,10 @@ import sim.android.hardware.service.SimSensorEvent;
 import javax.swing.*;
 
 /**
- * Class example Test rum simulatios.
- * <br/>
- * Interval Execute Classificator<br/>
- * float timeToChange = 10f;<br/>
- * ...<br/>
- * if (cont > timeToChange && cont < timeToChange + 1 && !fall) {<br/>
- * ...<br/>
- * if (fall && cont > timeToChange + 10) {<br/>
- * <br/>
- * Interval Execute Capture Data<br/>
- * float timeToChange = 2f;<br/>
- * ...<br/>
- * if (cont > timeToChange && cont < timeToChange + 1 && !fall) {<br/>
- * ...<br/>
- * if (fall && cont > timeToChange + 2) {<br/>
- * <br/>
- * Optimal min distance between animation<br/>
- * 0.1 * 0.1 * 0.2 <br/>
- * <br/>
- * <b>Gesture</b>
- * SpinSpindle: 	abrir puerta con dificultad<br/>
- * Hands2Hips: 		llevar manos a la cadera, (dolor de espalda)<br/>
- * Hand2Belly: 		llevar la mano al vientre, (dolor de vientre)<br/>
- * Wave: 			pedir ayuda o llamar atención<br/>
- * ScratchArm: 		rascar el codo<br/>
- * LeverPole: 		molestias en el movimiento y pedir ayuda   <br/>
+ * Activity Monitoring Demo.
  * @author UCM
  */
-public class ActvityMonitoringDemo implements PHATInitAppListener {
+public class ActivityMonitoringDemo implements PHATInitAppListener {
 
     private static final Logger logger = Logger.getLogger(TestHouse.class.getName());
     private BodiesAppState bodiesAppState;
@@ -105,12 +75,12 @@ public class ActvityMonitoringDemo implements PHATInitAppListener {
     private static Properties config;
 
     public static void main(String[] args) {
-        ActvityMonitoringDemo test = new ActvityMonitoringDemo();
+        ActivityMonitoringDemo test = new ActivityMonitoringDemo();
         PHATApplication phat = new PHATApplication(test);
         phat.setDisplayFps(true);
         phat.setDisplayStatView(false);
         AppSettings settings = new AppSettings(true);
-        settings.setTitle("PHAT");
+        settings.setTitle("Activity Monitoring Demo");
         settings.setWidth(640);
         settings.setHeight(480);
         phat.setSettings(settings);

@@ -13,7 +13,7 @@ To run the demo
 
 ```
 mvn clean compile
-mvn exec:java -Dexec.mainClass=phat.ActvityMonitoringDemo
+mvn exec:java -Dexec.mainClass=phat.ActivityMonitoringDemo
 ```
 In case of running into memory problems
 ```
