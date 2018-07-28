@@ -2,11 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>7</version>
-    </parent>
+
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.sf.phat</groupId>
     <packaging>jar</packaging>
@@ -23,11 +19,6 @@
             <distribution/>
         </license>
     </licenses>
-    <scm>
-        <connection>scm:git:git://github.com/GRASIA/phatsim.git</connection>
-        <developerConnection>scm:git:git@github.com:GRASIA/phatsim.git</developerConnection>
-        <url>https://github.com/Grasia/phatsim</url>
-    </scm>
     <developers>
         <developer>
             <id>escalope</id>
@@ -47,8 +38,8 @@
     </developers>
     <properties>
         <vendor>GRASIA Research Group</vendor>
-        <developername>Pablo Campillo-Sanchez</developername>
-        <developeremail>pabcampi@ucm.es</developeremail>
+        <developername>GRASIA</developername>
+        <developeremail>grasia@ucm.es</developeremail>
         <jme.version>3.0.1</jme.version>
         <sociaal.version>1.0.12-SNAPSHOT</sociaal.version>
         <jali.version>1.0.10-SNAPSHOT</jali.version>
