@@ -48,7 +48,7 @@ import phat.mobile.servicemanager.server.ServiceManagerServer;
 import phat.mobile.servicemanager.services.Service;
 import phat.sensors.accelerometer.AccelerationData;
 import phat.sensors.accelerometer.AccelerometerControl;
-import phat.sensors.accelerometer.XYShiftingAccelerationsChart;
+import phat.sensors.accelerometer.XYAccelerationsChart;
 import phat.server.PHATServerManager;
 import phat.server.ServerAppState;
 import phat.server.commands.ActivateAccelerometerServerCommand;
@@ -243,7 +243,7 @@ public class ActivityMonitoringDemo implements PHATInitAppListener {
             public void run() {
                 Socket s = null;
                 try {
-                    final XYShiftingAccelerationsChart chart = new XYShiftingAccelerationsChart(title,
+                    final XYAccelerationsChart chart = new XYAccelerationsChart(title,
                             sensor + ": " + title + " accelerations", "m/s2", "x,y,z");
                     chart.showWindow();
                     for (int k = 0; k < 5 && s == null; k++)

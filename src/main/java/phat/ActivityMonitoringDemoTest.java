@@ -75,9 +75,9 @@ import phat.world.WorldAppState;
  * LeverPole: 		molestias en el movimiento y pedir ayuda   <br/>
  * @author UCM
  */
-public class ActvityMonitoringDemo implements PHATInitAppListener {
+public class ActivityMonitoringDemoTest implements PHATInitAppListener {
 
-    private static final Logger logger = Logger.getLogger(ActvityMonitoringDemo.class.getName());
+    private static final Logger logger = Logger.getLogger(ActivityMonitoringDemoTest.class.getName());
     BodiesAppState bodiesAppState;
     ServerAppState serverAppState;
     DevicesAppState devicesAppState;
@@ -204,7 +204,7 @@ public class ActvityMonitoringDemo implements PHATInitAppListener {
      * @param args 0
      */
     public static void main(String[] args) {
-        ActvityMonitoringDemo app = new ActvityMonitoringDemo();
+        ActivityMonitoringDemoTest app = new ActivityMonitoringDemoTest();
         PHATApplication phat = new PHATApplication(app);
         phat.setDisplayFps(false);
         phat.setDisplayStatView(false);
